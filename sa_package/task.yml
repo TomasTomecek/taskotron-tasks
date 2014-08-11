@@ -1,0 +1,28 @@
+name: csmock
+desc: download specified srpm and statically analyze it
+maintainer: ttomecek
+
+input:
+    args:
+        - koji_build
+
+environment:
+    rpm:
+        - csmock
+
+task:
+    - name: download srpm from koji
+      koji:
+        action: download
+        koji_build: ${koji_build}
+        arch: src
+      export: koji_build
+
+    - name: run csmock on downloaded srpm
+      python:
+          file: run_csmock.py
+          callable: run
+          workdir: ${workdir}
+          koji_build: ${koji_build}
+      #export: rpmlint_output
+
