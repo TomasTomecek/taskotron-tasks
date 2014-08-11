@@ -15,7 +15,7 @@ task:
       koji:
         action: download
         koji_build: ${koji_build}
-        arch: src
+        arch: [src, ]
       export: koji_build
 
     - name: run csmock on downloaded srpm
