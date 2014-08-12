@@ -5,6 +5,7 @@ maintainer: ttomecek
 input:
     args:
         - koji_build
+        # - koji_tag  FIXME: not possible to do ATM
 
 environment:
     rpm:
@@ -24,5 +25,6 @@ task:
           callable: run
           workdir: ${workdir}
           koji_build: ${koji_build}
-      #export: rpmlint_output
+          # koji_tag: ${koji_tag} FIXME
+      export: csmock_output
 

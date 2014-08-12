@@ -1,36 +1,60 @@
+#!/usr/bin/python
+"""
+task for taskotron: use csmock to analyze provided koji build
+
+run it as: runtask -d -i <srpm_path> -t koji_build ./task.yml
+"""
+import os
 import subprocess
 
 from libtaskotron import check
 
-
-CSMOCK_COMMAND = """\
-csmock -t cppcheck,gcc,clang %(srpm_path)s\
-"""
+ANALYZERS = "cppcheck,gcc,clang"
+CSMOCK_COMMAND = ["csmock", "-t", ANALYZERS]
 
 
-def analyze(srpms):
-    for srpm in srpms:
-        cmd = CSMOCK_COMMAND % {'srpm_path': srpm}
-        rc = subprocess.call(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def analyze(srpm, work_dir):
+    """ analyze provided srpm """
+    cmd = CSMOCK_COMMAND + [srpm]
+    pwd = os.environ['PWD']
+    os.chdir(work_dir)
+    rc = subprocess.call(cmd)
+    # TODO: untar results
+    os.chdir(pwd)
+    return rc
 
-def run(workdir, koji_build):
-    print "Running mytask on %s" % koji_build
+
+def run(workdir, koji_build, koji_tag=None):
+    # TODO: figure out mock profile somehow
+    srpm = "None"
 
     try:
-        analyze(koji_build['downloaded_rpms'])
-    except Exception:
-        result = 'FAILED'
-    except KeyError:
+        srpm_path = koji_build['downloaded_rpms'][0]
+    except (KeyError, IndexError):
+        print 'no downloaded srpms'
         result = 'FAILED'
     else:
-        result = 'PASSED'
+        srpm = srpm_path.rsplit('/', 1)[1]
+        try:
+            rc = analyze(srpm, workdir)
+        except Exception as ex:
+            print repr(ex)
+            result = 'FAILED'
+        else:
+            if rc == 0:
+                result = 'PASSED'
+                # TODO: result = not passed if there are some defects
+                # TODO: upload results to result DB
+            else:
+                print 'Return code: %d' % rc
+                result = 'FAILED'
 
-    details = []
-    summary = 'mycheck %s for %s' % (result, koji_build)
+    summary = 'csmock %s for %s' % (result, srpm)
     report_type = check.ReportType.KOJI_BUILD
-    detail = check.CheckDetail(koji_build, report_type,
-                               result, summary)
-    #for rpmfile in rpmfiles:
-    #    detail.store(rpmfile, False)
+    detail = check.CheckDetail(item=srpm,
+                               report_type=report_type)
+    detail.outcome = result
+    detail.summary = summary
+    # TODO: add results into TAP
 
-    #return check.export_TAP(detail)
+    return check.export_TAP(detail)
