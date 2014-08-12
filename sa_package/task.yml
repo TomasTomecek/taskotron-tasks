@@ -10,6 +10,8 @@ input:
 environment:
     rpm:
         - csmock
+        - tar
+        - xz
 
 task:
     - name: download srpm from koji
@@ -17,7 +19,7 @@ task:
         action: download
         koji_build: ${koji_build}
         arch: [src, ]
-      export: koji_build
+      export: koji_build_dict
 
     - name: run csmock on downloaded srpm
       python:
@@ -25,6 +27,7 @@ task:
           callable: run
           workdir: ${workdir}
           koji_build: ${koji_build}
+          koji_build_dict: ${koji_build_dict}
           # koji_tag: ${koji_tag} FIXME
       export: csmock_output
 
